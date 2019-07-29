@@ -479,10 +479,15 @@ namespace OpenMS
           double f_end1 = std::min(f1.getConvexHull().getBoundingBox().maxX(), f2.getConvexHull().getBoundingBox().maxX());
           double f_end2 = std::max(f1.getConvexHull().getBoundingBox().maxX(), f2.getConvexHull().getBoundingBox().maxX());
 
+          //added to increase number of detected isotope peaks in ZODIAC workflow
+          double lentgh1 = f1.getConvexHull().getBoundingBox().maxX()-f1.getConvexHull().getBoundingBox().minX();
+          double lentgh2 = f2.getConvexHull().getBoundingBox().maxX()-f2.getConvexHull().getBoundingBox().minX();
+          //---------------------------------------------------------------------
           double union_length = f_end2 - f_start1;
           double intersect_length = std::max(0., f_end1 - f_start2);
 
-          if (intersect_length / union_length < rt_min_overlap)
+            //changed to increase number of detected isotope peaks in ZODIAC workflow. original: if (intersect_length / union_length < rt_min_overlap)
+            if (intersect_length / std::min(lentgh1, lentgh2) < rt_min_overlap)
             continue;
         }
 

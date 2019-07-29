@@ -1610,7 +1610,22 @@ namespace OpenMS
           //this overwrites the m/z of the isolation window, as it is probably more accurate
           if (in_spectrum_list_)
           {
-            spec_.getPrecursors().back().setMZ(value.toDouble());
+             //changed for ZODIAC workflow:
+             // if new_mz is close to current_mz, use this value since it is the target m/z which was supposed to be selected.
+             // if new_mz differs from current_mz, the instrument did actually isolated a different ion m/z, e.g. an isotope peak
+             // report the actual target m/z to be able to exclude MS/MS of isotope peaks.
+             // original code was: spec_.getPrecursors().back().setMZ(value.toDouble());
+              double current_mz  = spec_.getPrecursors().back().getMZ();
+              double new_mz = value.toDouble();
+              if (current_mz==0.0) {
+                  spec_.getPrecursors().back().setMZ(new_mz);
+              } else if (std::abs(current_mz-new_mz)<0.1) {
+                  spec_.getPrecursors().back().setMZ(new_mz);
+              } else {
+                  //keep isolation window m/z
+                  LOG_WARN << "precursor m/z and isolation window m/z differ" << std::endl;
+              }
+              //--------------------------------------------------------------------------------------------------------
           }
           else
           {

@@ -121,6 +121,7 @@ namespace OpenMS
                     const StringList& adducts,
                     const vector<pair<double,double>>& f_isotopes,
                     const int& feature_charge,
+                    const double& feature_rt, //added retention time output for ZODIAC workflow
                     uint64_t& feature_id,
                     bool& writecompound,
                     const bool& no_masstrace_info_isotope_pattern,
@@ -249,6 +250,9 @@ namespace OpenMS
             os << ">charge " << int_charge << "\n\n";
           }
 
+          //added retention time output for ZODIAC workflow
+          os << ">retention " << feature_rt << "\n\n";
+
           // Use precursor m/z & int and no ms1 spectra is available else use values from ms1 spectrum
           Size no_isotopes = isotopes.size();
           Size no_f_isotopes = f_isotopes.size();
@@ -294,7 +298,11 @@ namespace OpenMS
           os << ">ms1peaks" << endl;
           for (auto iter = precursor_spec.begin(); iter != precursor_spec.end(); ++iter)
           {
-            os << iter->getMZ() << " " << iter->getIntensity() << "\n";
+              //changed for ZODIAC workflow: only write non-zero intensity peaks
+              double intensity = iter->getIntensity();
+              if (intensity>0.0){
+                  os << iter->getMZ() << " " << intensity << "\n";
+              }
           }
         }
 
@@ -381,6 +389,8 @@ namespace OpenMS
     StringList adducts;
     uint64_t feature_id;
     int feature_charge;
+    //added retention time output for ZODIAC workflow
+    double feature_rt;
     vector<pair<double, double>> f_isotopes;
     f_isotopes.clear();
 
@@ -400,8 +410,10 @@ namespace OpenMS
 
         feature_id = feature->getUniqueId();
         feature_charge = feature->getCharge();
+        //added retention time output for ZODIAC workflow
+        feature_rt = feature->getRT();
 
-        // multiple charged compounds are not allowed in sirius
+          // multiple charged compounds are not allowed in sirius
         if (feature_charge > 1 || feature_charge < -1)
         {
           count_skipped_features = count_skipped_features + 1;
@@ -435,6 +447,7 @@ namespace OpenMS
                      adducts,
                      f_isotopes,
                      feature_charge,
+                     feature_rt, //added retention time output for ZODIAC workflow
                      feature_id,
                      writecompound,
                      no_masstrace_info_isotope_pattern,
@@ -464,6 +477,7 @@ namespace OpenMS
                    adducts,
                    f_isotopes,
                    feature_charge,
+                   feature_rt, //added retention time output for ZODIAC workflow
                    feature_id,
                    writecompound,
                    no_masstrace_info_isotope_pattern,
@@ -505,6 +519,7 @@ namespace OpenMS
                    native_id_type_accession,
                    adducts,
                    f_isotopes,
+                   feature_rt, //added retention time output for ZODIAC workflow
                    feature_charge,
                    feature_id,
                    writecompound,
@@ -519,6 +534,9 @@ namespace OpenMS
     os.close();
 
     LOG_WARN << "No MS1 spectrum for this precursor. Occurred " << count_no_ms1 << " times." << endl;
+    //added output for ZODIAC workflow
+    LOG_WARN << unassigned_ms2.size() << " MS2 spectra could not be assigned to a feature." << endl;
+    //---------------------------
     LOG_WARN << count_skipped_spectra << " spectra were skipped due to precursor charge below -1 and above +1." << endl;
     LOG_WARN << "Charge of 0 was set to +1 due to positive polarity " << count_to_pos << " times."<< endl;
     LOG_WARN << "Charge of 0 was set to -1 due to negative polarity " << count_to_neg << " times." << endl;

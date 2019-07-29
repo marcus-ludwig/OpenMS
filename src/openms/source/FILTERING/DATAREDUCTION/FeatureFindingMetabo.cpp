@@ -536,7 +536,7 @@ namespace OpenMS
 
     // std::cout << std::setprecision(15) << "old " << score_sigma_old << " new " << score_sigma << std::endl;
 
-    double sigma_mult(3.0);
+    double sigma_mult(5.0); //changed from "double sigma_mult(3.0)" to increase number of detected isotope peaks in ZODIAC workflow
 
     double mz_score(0.0);
 
@@ -575,7 +575,8 @@ namespace OpenMS
 
     double tr1_length(tr1.getFWHM());
     double tr2_length(tr2.getFWHM());
-    double max_length = (tr1_length > tr2_length) ? tr1_length : tr2_length;
+//    double max_length = (tr1_length > tr2_length) ? tr1_length : tr2_length;
+    double min_length = (tr1_length > tr2_length) ? tr2_length : tr1_length; //added to increase number of detected isotope peaks in ZODIAC workflow
 
     // std::cout << "tr1 " << tr1_length << " tr2 " << tr2_length << std::endl;
 
@@ -620,7 +621,7 @@ namespace OpenMS
       overlap = std::fabs(end_rt - start_rt);
     }
 
-    double proportion(overlap / max_length);
+    double proportion(overlap / min_length); //changed from "double proportion(overlap / max_length)"  to increase number of detected isotope peaks in ZODIAC workflow
     if (proportion < 0.7)
     {
       return 0.0;
