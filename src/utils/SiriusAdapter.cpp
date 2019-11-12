@@ -131,13 +131,17 @@ protected:
     registerInputFile_("in_featureinfo", "<file>", "", "FeatureXML input with feature and adduct information", false);
     setValidFormats_("in_featureinfo", ListUtils::create<String>("featurexml"));
 
-    registerOutputFile_("out_sirius", "<file>", "", "MzTab Output file for SiriusAdapter results");
+    registerOutputFile_("out_sirius", "<file>", "", "MzTab Output file for SiriusAdapter results", false);
     setValidFormats_("out_sirius", ListUtils::create<String>("mzTab"));
 
     registerOutputFile_("out_fingerid","<file>", "", "MzTab output file for CSI:FingerID, if this parameter is given, SIRIUS will search for a molecular structure using CSI:FingerID after determining the sum formula", false);
     setValidFormats_("out_fingerid", ListUtils::create<String>("mzTab"));
 
-    // adapter parameters
+    registerOutputFile_("out_ms","<file>", "", "Internal SIRIUS .ms format after OpenMS preprocessing", false);
+    registerStringOption_("sirius_workspace_directory","<directory>", "", "Output directory with SIRIUS workspace", false);
+
+
+      // adapter parameters
     registerIntOption_("filter_by_num_masstraces", "<num>", 1, "Features have to have at least x MassTraces. To use this parameter feature_only is neccessary", false);
     setMinInt_("filter_by_num_masstraces", 1);
     registerFlag_("feature_only", "Uses the feature information from in_featureinfo to reduce the search space to only MS2 associated with a feature", false);
@@ -147,6 +151,7 @@ protected:
     registerDoubleOption_("precursor_rt_tolerance", "<num>", 5, "Tolerance window (left and right) for precursor selection [seconds]", false);
     registerIntOption_("isotope_pattern_iterations", "<num>", 3, "Number of iterations that should be performed to extract the C13 isotope pattern. If no peak is found (C13 distance) the function will abort. Be careful with noisy data - since this can lead to wrong isotope patterns.", false, true);
     registerFlag_("no_masstrace_info_isotope_pattern", "Use this flag if the masstrace information from a feature should be discarded and the isotope_pattern_iterations should be used instead.", true);
+    registerFlag_("converter_mode", "Use this flag in combination with the out_ms file to only convert the input mzML and featureXML to an .ms file. Without further SIRIUS processing.", true);
 
     // internal sirius parameters
     registerStringOption_("profile", "<choice>", "qtof", "Specify the used analysis profile", false);
@@ -179,6 +184,10 @@ protected:
     String out_sirius = getStringOption_("out_sirius");
     String out_csifingerid = getStringOption_("out_fingerid");
     String featureinfo = getStringOption_("in_featureinfo");
+
+    String out_ms = getStringOption_("out_ms");
+
+    bool converter_mode = getFlag_("converter_mode");
 
     // parameter for SiriusAdapter
     bool feature_only = getFlag_("feature_only");
@@ -299,6 +308,15 @@ protected:
     // write msfile
     SiriusMSFile::store(spectra, tmp_ms_file, feature_mapping, feature_only, isotope_pattern_iterations, no_mt_info);
 
+    // converter_mode enabled
+    if (!out_ms.empty() && converter_mode)
+    {
+      QFile::copy(tmp_ms_file.toQString(), out_ms.toQString());
+      LOG_WARN << "SiriusAdapter was used in converter mode and is terminated after openms preprocessing. \n"
+                  "If you would like to run SIRIUS internally please disable the converter mode." << std::endl;
+      return EXECUTION_OK;
+    }
+
     // assemble SIRIUS parameters
     QStringList process_params;
     process_params << "-p" << profile
@@ -394,8 +412,17 @@ protected:
       csifile.store(out_csifingerid, csi_result);
     }
 
+    // should the ms file be retained (non-converter mode)
+    if (!out_ms.empty())
+    {
+      QFile::copy(tmp_ms_file.toQString(), out_ms.toQString());
+      LOG_WARN << "Preprocessed .ms files was moved to " << out_ms << std::endl;
+    }
+
     // clean tmp directory if debug level < 2
-    if (debug_level_ >= 2)
+    // if out_ms is set - the files have already be moved to
+    // the designated location
+    if (debug_level_ >= 2 && out_ms.empty())
     {
       writeDebug_("Keeping temporary files in directory '" + String(tmp_dir) + " and msfile at this location "+ tmp_ms_file + ". Set debug level to 1 or lower to remove them.", 2);
     }
