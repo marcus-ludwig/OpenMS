@@ -1653,7 +1653,19 @@ namespace OpenMS
           //this overwrites the m/z of the isolation window, as it is probably more accurate
           if (in_spectrum_list_)
           {
-            spec_.getPrecursors().back().setMZ(value.toDouble());
+            // If new_mz is close to current_mz, use this value since it is the target m/z which was supposed
+            // to be selected for fragmentation.
+            // If new_mz differs from current_mz, the instrument in fact isolated an ion with different m/z,
+            // e.g. an isotope peak. Don't update m/z but report the actual target m/z.
+            // This enables e.g. the exclusion of MS/MS of isotope peaks.
+            double current_mz  = spec_.getPrecursors().back().getMZ();
+            double new_mz = value.toDouble();
+            if ((current_mz==0.0) || (std::abs(current_mz-new_mz)<0.1)) {
+              spec_.getPrecursors().back().setMZ(new_mz);
+            } else {
+              //keep isolation window target m/z
+              LOG_WARN << "precursor m/z and isolation window m/z differ" << std::endl;
+            }
           }
           else
           {
